@@ -7,6 +7,7 @@
 
 import UIKit
 import SDWebImage
+import ActiveLabel
 
 class UploadTweetController: UIViewController {
     
@@ -39,7 +40,7 @@ class UploadTweetController: UIViewController {
         return imageView
     }()
     
-    private let captionTextView = CaptionTextView()
+    private let captionTextView = InputTextView()
     
     private lazy var imageCaptionStack: UIStackView = {
         let stack = UIStackView(arrangedSubviews: [profileImageView, captionTextView])
@@ -56,11 +57,11 @@ class UploadTweetController: UIViewController {
         return stack
     }()
     
-    private lazy var replyLabel: UILabel = {
-        let label = UILabel()
+    private lazy var replyLabel: ActiveLabel = {
+        let label = ActiveLabel()
         label.font = UIFont.systemFont(ofSize: 14)
         label.textColor = .lightGray
-        label.text = "Replying to @joker"
+        label.mentionColor = .twitterBlue
         label.widthAnchor.constraint(equalToConstant: view.frame.size.width).isActive = true
         return label
     }()
@@ -80,7 +81,7 @@ class UploadTweetController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         configureUI()
-        
+        configureMentionHandler()
     }
     
     override func viewDidLayoutSubviews() {
@@ -105,7 +106,7 @@ class UploadTweetController: UIViewController {
             }
             
             if case .reply(let tweet) = self?.config {
-                NotificationService.shared.uploadNotification(type: .reply, tweet: tweet)
+                NotificationService.shared.uploadNotification(toUser: tweet.user, type: .reply, tweetID: tweet.tweetID)
             }
             
             self?.dismiss(animated: true, completion: nil)
@@ -113,6 +114,21 @@ class UploadTweetController: UIViewController {
     }
     
     //MARK: - API
+    
+    fileprivate func uploadMentionNotification(forCaption caption: String, tweetID: String?) {
+        guard caption.contains("@") else { return }
+        let words = caption.components(separatedBy: .whitespacesAndNewlines)
+        
+        words.forEach { word in
+            guard word.hasPrefix("@") else { return }
+            var username = word.trimmingCharacters(in: .symbols)
+            username = username.trimmingCharacters(in: .punctuationCharacters)
+            
+            UserServices.shared.fetchUser(withUsername: username) { (mentionedUser) in
+                NotificationService.shared.uploadNotification(toUser: mentionedUser, type: .mention, tweetID: tweetID)
+            }
+        }
+    }
     
     //MARK: - Helpers
     
@@ -148,6 +164,12 @@ class UploadTweetController: UIViewController {
         navigationItem.leftBarButtonItem = UIBarButtonItem(barButtonSystemItem: .cancel, target: self, action: #selector(handleCancel))
         navigationItem.leftBarButtonItem?.tintColor = .twitterBlue
         navigationItem.rightBarButtonItem = UIBarButtonItem(customView: tweetButton)
+    }
+    
+    private func configureMentionHandler() {
+        replyLabel.handleMentionTap { mention in
+            print("mentioned")
+        }
     }
     
 }

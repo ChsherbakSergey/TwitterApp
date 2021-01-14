@@ -7,11 +7,13 @@
 
 import UIKit
 import SDWebImage
+import ActiveLabel
 
 protocol TweetCellDelegate: class {
     func handleProfileImageTapped(_ cell: TweetCell)
     func handleReplyTapped(_ cell: TweetCell)
     func handleLikeTapped(_ cell: TweetCell)
+    func handleFetchUser(withUsername username: String)
 }
 
 class TweetCell: UICollectionViewCell {
@@ -40,54 +42,45 @@ class TweetCell: UICollectionViewCell {
         return imageView
     }()
     
-    private let replyLabel: UILabel = {
-        let label = UILabel()
+    private let replyLabel: ActiveLabel = {
+        let label = ActiveLabel()
         label.textColor = .lightGray
         label.font = UIFont.systemFont(ofSize: 12)
+        label.mentionColor = .twitterBlue
         return label
     }()
     
     private let infoLabel = UILabel()
     
-    private let captionLabel: UILabel = {
-        let label = UILabel()
+    private let captionLabel: ActiveLabel = {
+        let label = ActiveLabel()
         label.font = UIFont.systemFont(ofSize: 14)
         label.numberOfLines = 0
+        label.mentionColor = .twitterBlue
+        label.hashtagColor = .twitterBlue
         return label
     }()
     
     private lazy var commentButton: UIButton = {
-        let button = UIButton(type: .system)
-        button.setImage(UIImage(named: "comment"), for: .normal)
-        button.tintColor = .darkGray
-        button.setDimensions(width: 20, height: 20)
+        let button = createButton(withImageName: "comment")
         button.addTarget(self, action: #selector(handleCommentTapped), for: .touchUpInside)
         return button
     }()
-    
+
     private lazy var retweetButton: UIButton = {
-        let button = UIButton(type: .system)
-        button.setImage(UIImage(named: "retweet"), for: .normal)
-        button.tintColor = .darkGray
-        button.setDimensions(width: 20, height: 20)
+        let button = createButton(withImageName: "retweet")
         button.addTarget(self, action: #selector(handleRetweetTapped), for: .touchUpInside)
         return button
     }()
     
     private lazy var likeButton: UIButton = {
-        let button = UIButton(type: .system)
-        button.setImage(UIImage(named: "like"), for: .normal)
-        button.tintColor = .darkGray
-        button.setDimensions(width: 20, height: 20)
-        button.addTarget(self, action: #selector(handleLikeTapped), for: .touchUpInside)
+        let button = createButton(withImageName: "like")
+        button.addTarget(self, action: #selector(handleLikeButtonTapped), for: .touchUpInside)
         return button
     }()
     
     private lazy var shareButton: UIButton = {
-        let button = UIButton(type: .system)
-        button.setImage(UIImage(named: "share"), for: .normal)
-        button.tintColor = .darkGray
-        button.setDimensions(width: 20, height: 20)
+        let button = createButton(withImageName: "share")
         button.addTarget(self, action: #selector(handleShareTapped), for: .touchUpInside)
         return button
     }()
@@ -97,7 +90,8 @@ class TweetCell: UICollectionViewCell {
     
     override init(frame: CGRect) {
         super.init(frame: frame)
-        congigureUI()
+        configureUI()
+        configureMentionHandler()
     }
     
     required init?(coder: NSCoder) {
@@ -117,7 +111,7 @@ class TweetCell: UICollectionViewCell {
     @objc private func handleRetweetTapped() {
     }
     
-    @objc private func handleLikeTapped() {
+    @objc private func handleLikeButtonTapped() {
         delegate?.handleLikeTapped(self)
     }
     
@@ -128,7 +122,7 @@ class TweetCell: UICollectionViewCell {
     //MARK: - Helpers
     
     ///Sets Initial UI
-    private func congigureUI() {
+    private func configureUI() {
         
         let captionsStack = UIStackView(arrangedSubviews: [infoLabel, captionLabel])
         captionsStack.axis = .vertical
@@ -178,6 +172,20 @@ class TweetCell: UICollectionViewCell {
         likeButton.setImage(viewModel.likeButtonImage, for: .normal)
         replyLabel.isHidden = viewModel.shouldHideReplyLabel
         replyLabel.text = viewModel.replyText
+    }
+    
+    private func createButton(withImageName imageName: String) -> UIButton {
+        let button = UIButton(type: .system)
+        button.setImage(UIImage(named: imageName), for: .normal)
+        button.tintColor = .darkGray
+        button.setDimensions(width: 20, height: 20)
+        return button
+    }
+    
+    func configureMentionHandler() {
+        captionLabel.handleMentionTap { (username) in
+            self.delegate?.handleFetchUser(withUsername: username)
+        }
     }
     
     

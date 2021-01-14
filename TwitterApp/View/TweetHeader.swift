@@ -6,9 +6,11 @@
 //
 
 import UIKit
+import ActiveLabel
 
 protocol TweetHeaderDelegate: class {
     func showActionSheet()
+    func handleFetchUser(withUsername username: String)
 }
 
 class TweetHeader: UICollectionReusableView {
@@ -54,9 +56,11 @@ class TweetHeader: UICollectionReusableView {
         return label
     }()
     
-    private let captionLabel: UILabel = {
-        let label = UILabel()
+    private let captionLabel: ActiveLabel = {
+        let label = ActiveLabel()
         label.text = "Hey you! How are you doing there?"
+        label.mentionColor = .twitterBlue
+        label.hashtagColor = .twitterBlue
         label.font = UIFont.systemFont(ofSize: 20)
         label.numberOfLines = 0
         return label
@@ -79,9 +83,10 @@ class TweetHeader: UICollectionReusableView {
         return button
     }()
     
-    private let replyLabel: UILabel = {
-        let label = UILabel()
+    private let replyLabel: ActiveLabel = {
+        let label = ActiveLabel()
         label.textColor = .lightGray
+        label.mentionColor = .twitterBlue
         label.font = UIFont.systemFont(ofSize: 12)
         return label
     }()
@@ -161,6 +166,7 @@ class TweetHeader: UICollectionReusableView {
     override init(frame: CGRect) {
         super.init(frame: frame)
         configureUI()
+        configureMentionHandler()
     }
     
     required init?(coder: NSCoder) {
@@ -272,6 +278,12 @@ class TweetHeader: UICollectionReusableView {
         likesButton.tintColor = viewModel.likeButtonTintColor
         replyLabel.isHidden = viewModel.shouldHideReplyLabel
         replyLabel.text = viewModel.replyText
+    }
+    
+    func configureMentionHandler() {
+        captionLabel.handleMentionTap { (username) in
+            self.delegate?.handleFetchUser(withUsername: username)
+        }
     }
 
 }

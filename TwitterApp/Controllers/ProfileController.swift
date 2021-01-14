@@ -6,6 +6,7 @@
 //
 
 import UIKit
+import Firebase
 
 private let reuseIdentifier = "TweetCell"
 private let headerIdentifier = "ProfileHeader"
@@ -159,7 +160,14 @@ extension ProfileController {
 extension ProfileController: UICollectionViewDelegateFlowLayout {
     
     func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, referenceSizeForHeaderInSection section: Int) -> CGSize {
-        return CGSize(width: view.frame.size.width, height: 350)
+        
+        var height: CGFloat = 310
+        
+        if user.bio != nil {
+            height += 50
+        }
+        
+        return CGSize(width: view.frame.size.width, height: height)
     }
  
     func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, sizeForItemAt indexPath: IndexPath) -> CGSize {
@@ -190,7 +198,11 @@ extension ProfileController: ProfileHeaderDelegate {
     func handleEditProfileFollow(_ header: ProfileHeader) {
         
         if user.isCurrentUser {
-            print("Okay")
+            let controller = EditProfileController(user: user)
+            controller.delegate = self
+            let nav = UINavigationController(rootViewController: controller)
+            nav.modalPresentationStyle = .fullScreen
+            present(nav, animated: true, completion: nil)
             return
         }
         
@@ -201,10 +213,33 @@ extension ProfileController: ProfileHeaderDelegate {
             }
         } else {
             UserServices.shared.followUser(uid: user.uid) { [weak self] (error, reference) in
-                self?.user.isFollowed = true
-                self?.collectionView.reloadData()
-                NotificationService.shared.uploadNotification(type: .follow, user: self?.user)
+                guard let self = self else { return }
+                self.user.isFollowed = true
+                self.collectionView.reloadData()
+                NotificationService.shared.uploadNotification(toUser: self.user, type: .follow)
             }
+        }
+    }
+    
+}
+
+//MARK: - EditProfileControllerDelegate
+
+extension ProfileController: EditProfileControllerDelegate {
+    
+    func controller(_ controller: EditProfileController, wantsToUpdateUser user: User) {
+        self.user = user
+        DispatchQueue.main.async {
+            self.collectionView.reloadData()
+        }
+    }
+    
+    func handleLogout() {
+        do {
+            try Auth.auth().signOut()
+            print("DEBUG: Signed out the user")
+        } catch {
+            print("DEBUG: Error signing the user out")
         }
     }
     

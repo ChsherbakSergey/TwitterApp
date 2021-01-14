@@ -18,4 +18,8 @@ target 'TwitterApp' do
 	
 	pod 'SDWebImage'
 
+	#Mentions and Hashtags
+	
+	pod 'ActiveLabel' 
+
 end

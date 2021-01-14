@@ -8,9 +8,16 @@
 import UIKit
 import Firebase
 
+enum ActionButtonConfiguration {
+    case tweet
+    case message
+}
+
 class MainTabBarController: UITabBarController {
     
     //MARK: - Properties
+    
+    private var butonConfig: ActionButtonConfiguration = .tweet
     
     var user: User? {
         didSet {
@@ -34,7 +41,6 @@ class MainTabBarController: UITabBarController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-//        logUserOut()
 //        view.backgroundColor = .twitterBlue
         authenticateUserAndConfigureUI()
         fetchUser()
@@ -73,20 +79,22 @@ class MainTabBarController: UITabBarController {
         }
     }
     
-    func logUserOut() {
-        do {
-            try Auth.auth().signOut()
-            print("DEBUG: Signed out the user")
-        } catch {
-            print("DEBUG: Error signing the user out")
-        }
-    }
-    
     //MARK: - Selectors
     
     @objc private func actionButtonIsTapped() {
-        guard let user = user else { return }
-        let nav = UINavigationController(rootViewController: UploadTweetController(user: user, config: .tweet))
+        
+        let controller: UIViewController
+        
+        switch butonConfig {
+        case .message:
+            controller = ExploreController(config: .messages)
+        case .tweet:
+            guard let user = user else { return }
+            controller = UploadTweetController(user: user, config: .tweet)
+        }
+        
+        
+        let nav = UINavigationController(rootViewController: controller)
         nav.modalPresentationStyle = .fullScreen
         present(nav, animated: true, completion: nil)
     }
@@ -98,7 +106,7 @@ class MainTabBarController: UITabBarController {
         let feed = FeedController(collectionViewLayout: UICollectionViewFlowLayout())
         let feedNav = templateNavigationController(image: UIImage(named: "home_unselected"), rootViewController: feed)
         
-        let explore = ExploreController()
+        let explore = ExploreController(config: .userSearch)
         let exploreNav = templateNavigationController(image: UIImage(named: "search_unselected"), rootViewController: explore)
         
         let notifications = NotificationsController()
@@ -120,8 +128,22 @@ class MainTabBarController: UITabBarController {
     
     ///Sets up the initial UI
     private func configureUI() {
+        self.delegate = self
         //Adding sunviews
         view.addSubview(actionButton)
     }
 
+}
+
+//MARK: - UITabBarControllerDelegate
+
+extension MainTabBarController: UITabBarControllerDelegate {
+    
+    func tabBarController(_ tabBarController: UITabBarController, didSelect viewController: UIViewController) {
+        let index = viewControllers?.firstIndex(of: viewController)
+        let imageName = index == 3 ? "mail" : "new_tweet"
+        actionButton.setImage(UIImage(named: imageName), for: .normal)
+        butonConfig = index == 3 ? .message : .tweet
+    }
+    
 }
